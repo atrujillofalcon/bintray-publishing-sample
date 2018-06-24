@@ -1,3 +1,5 @@
+import net.researchgate.release.GitAdapter
+
 buildscript {
 
     repositories {
@@ -5,7 +7,94 @@ buildscript {
     }
 }
 
+plugins {
+    id 'net.researchgate.release' version '2.6.0'
+    id "com.jfrog.bintray" version "1.8.1"
+}
+
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'maven-publish'
 
+group 'com.github.atrujillofalcon'
+version project.property('version')
+
+//Script to generate valid Maven Central pom.xml
+def pomConfig = {
+    licenses {
+        license {
+            name "The Apache Software License, Version 2.0"
+            url "http://www.apache.org/licenses/LICENSE-2.0.txt"
+            distribution "repo"
+        }
+    }
+    developers {
+        developer {
+            id "atrujillo"
+            name "Arnaldo Trujillo"
+            email "atrujillo92work@gmail.com"
+        }
+    }
+
+    scm {
+        url "https://github.com/atrujillofalcon/bintray-publishing-sample"
+    }
+}
+
+
+publishing {
+    publications {
+        MyPublication(MavenPublication) {
+            from components.java
+            groupId 'com.github.atrujillofalcon'
+            artifactId 'bintray-publishing-sample'
+            version project.property('version')
+            pom.withXml {
+                def root = asNode()
+                root.appendNode('description', 'Bintray publishing example for UnBlogDecode')
+                root.appendNode('name', 'Bintray Publishing Sample')
+                root.appendNode('url', 'https://github.com/atrujillofalcon/bintray-publishing-sample')
+                root.children().last() + pomConfig
+            }
+        }
+    }
+}
+//End of script to generate valid Maven Central pom.xml
+
+bintray {
+    user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
+    key = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : System.getenv('BINTRAY_API_KEY')
+    configurations = ['archives']
+    publications = ['MyPublication']
+    pkg {
+        repo = 'unblogdecode-repo'
+        name = 'es-atrujillo-decode-binytray-publishing'
+        licenses = ['Apache-2.0']
+        vcsUrl = 'https://github.com/atrujillofalcon/bintray-publishing-sample.git'
+    }
+}
+
+release {
+    failOnCommitNeeded = true
+    failOnPublishNeeded = true
+    failOnSnapshotDependencies = true
+    failOnUnversionedFiles = false
+    failOnUpdateNeeded = true
+    revertOnFail = true
+    preCommitText = ''
+    preTagCommitMessage = '[Gradle Release Plugin] - pre tag commit: '
+    tagCommitMessage = '[Gradle Release Plugin] - creating tag: '
+    newVersionCommitMessage = '[Gradle Release Plugin] - new version commit: '
+    tagTemplate = '${version}'
+    versionPropertyFile = 'gradle.properties'
+    scmAdapters = [
+            GitAdapter,
+    ]
+
+    git {
+        requireBranch = 'master'
+        pushToRemote = 'origin'
+        pushToBranchPrefix = ''
+        commitVersionFileOnly = false
+    }
+}
